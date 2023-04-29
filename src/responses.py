@@ -1,6 +1,21 @@
 from src import personas
 from asgiref.sync import sync_to_async
 
+import openai
+from termcolor import colored
+import streamlit as st
+
+from .database import get_redis_connection,get_redis_results
+from .config import CHAT_MODEL,COMPLETIONS_MODEL, INDEX_NAME
+
+async def pre_handle(user_message) -> str:
+    question_extract = openai.Completion.create(model=COMPLETIONS_MODEL,prompt=f"Extract the user's latest question from this message: {user_message}. Extract it and translate it in english as a sentence stating the Question")
+    text = question_extract['choices'][0]['text']
+    search_result = get_redis_results(get_redis_connection(),text,INDEX_NAME)['result'][0]
+    result = "MORE OF THE WHITEPAPER\n" + search_result + "\n" + user_message
+    print(result)
+    return result
+
 async def official_handle_response(message, client) -> str:
     return await sync_to_async(client.chatbot.ask)(message)
 

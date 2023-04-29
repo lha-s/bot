@@ -8,6 +8,8 @@ from Bard import Chatbot as BardChatbot
 from revChatGPT.V3 import Chatbot
 from revChatGPT.V1 import AsyncChatbot
 from EdgeGPT import Chatbot as EdgeChatbot
+import openai
+
 
 logger = log.setup_logger(__name__)
 load_dotenv()
@@ -62,9 +64,14 @@ class aclient(discord.Client):
                 chat_model_status = f'ChatGPT {self.openAI_gpt_engine}'
             elif self.chat_model == "OFFICIAL":
                 chat_model_status = f'OpenAI {self.openAI_gpt_engine}'
-            response = (f'> **{user_message}** - <@{str(author)}> ({chat_model_status}) \n\n')
+            # response = (f'> **{user_message}** - <@{str(author)}> ({chat_model_status}) \n\n')
+            response = (f'> **{user_message}** - <@{str(author)}> \n\n')
             if self.chat_model == "OFFICIAL":
-                response = f"{response}{await responses.official_handle_response(user_message, self)}"
+                ####
+                result = ""
+                result = f"{result}{await responses.pre_handle(user_message)}"
+                ####
+                response = f"{response}{await responses.official_handle_response(result, self)}"
             elif self.chat_model == "UNOFFICIAL":
                 response = f"{response}{await responses.unofficial_handle_response(user_message, self)}"
             elif self.chat_model == "Bard":

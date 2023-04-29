@@ -58,20 +58,24 @@ def run_discord_bot():
     #         logger.info("You already on public mode!")
 
 
-    # @client.tree.command(name="replyall", description="Toggle replyAll access")
-    # async def replyall(interaction: discord.Interaction):
-    #     client.replying_all_discord_channel_id = str(interaction.channel_id)
-    #     await interaction.response.defer(ephemeral=False)
-    #     if client.is_replying_all == "True":
-    #         client.is_replying_all = "False"
-    #         await interaction.followup.send(
-    #             "> **INFO: Next, the bot will response to the Slash Command. If you want to switch back to replyAll mode, use `/replyAll` again**")
-    #         logger.warning("\x1b[31mSwitch to normal mode\x1b[0m")
-    #     elif client.is_replying_all == "False":
-    #         client.is_replying_all = "True"
-    #         await interaction.followup.send(
-    #             "> **INFO: Next, the bot will disable Slash Command and responding to all message in this channel only. If you want to switch back to normal mode, use `/replyAll` again**")
-    #         logger.warning("\x1b[31mSwitch to replyAll mode\x1b[0m")
+    @client.tree.command(name="replyall", description="Toggle replyAll access")
+    async def replyall(interaction: discord.Interaction):
+        role = discord.utils.get(interaction.guild.roles, name="Team")
+        if role in interaction.user.roles:
+            client.replying_all_discord_channel_id = str(interaction.channel_id)
+            await interaction.response.defer(ephemeral=False)
+            if client.is_replying_all == "True":
+                client.is_replying_all = "False"
+                await interaction.followup.send(
+                    "> **INFO: Next, the bot will response to the Slash Command. If you want to switch back to replyAll mode, use `/replyAll` again**")
+                logger.warning("\x1b[31mSwitch to normal mode\x1b[0m")
+            elif client.is_replying_all == "False":
+                client.is_replying_all = "True"
+                await interaction.followup.send(
+                    "> **INFO: Next, the bot will disable Slash Command and responding to all message in this channel only. If you want to switch back to normal mode, use `/replyAll` again**")
+                logger.warning("\x1b[31mSwitch to replyAll mode\x1b[0m")
+        else:
+            return
 
 
     # @client.tree.command(name="chat-model", description="Switch different chat model")
@@ -123,23 +127,27 @@ def run_discord_bot():
 
     @client.tree.command(name="reset", description="Complete reset conversation history")
     async def reset(interaction: discord.Interaction):
-        await interaction.response.defer(ephemeral=False)
-        if client.chat_model == "OFFICIAL":
-            client.chatbot = client.get_chatbot_model()
-        elif client.chat_model == "UNOFFICIAL":
-            client.chatbot.reset_chat()
-            await client.send_start_prompt()
-        elif client.chat_model == "Bard":
-            client.chatbot = client.get_chatbot_model()
-            await client.send_start_prompt()
-        elif client.chat_model == "Bing":
-            await client.chatbot.close()
-            client.chatbot = client.get_chatbot_model()
-            await client.send_start_prompt()
-        await interaction.followup.send("> **INFO: I have forgotten everything.**")
-        personas.current_persona = "standard"
-        logger.warning(
-            f"\x1b[31m{client.chat_model} bot has been successfully reset\x1b[0m")
+        role = discord.utils.get(interaction.guild.roles, name="Team")
+        if role in interaction.user.roles:
+            await interaction.response.defer(ephemeral=False)
+            if client.chat_model == "OFFICIAL":
+                client.chatbot = client.get_chatbot_model()
+            elif client.chat_model == "UNOFFICIAL":
+                client.chatbot.reset_chat()
+                await client.send_start_prompt()
+            elif client.chat_model == "Bard":
+                client.chatbot = client.get_chatbot_model()
+                await client.send_start_prompt()
+            elif client.chat_model == "Bing":
+                await client.chatbot.close()
+                client.chatbot = client.get_chatbot_model()
+                await client.send_start_prompt()
+            await interaction.followup.send("> **INFO: I have forgotten everything.**")
+            personas.current_persona = "standard"
+            logger.warning(
+                f"\x1b[31m{client.chat_model} bot has been successfully reset\x1b[0m")
+        else:
+            return
 
     @client.tree.command(name="help", description="Show help for the bot")
     async def help(interaction: discord.Interaction):
@@ -185,76 +193,81 @@ def run_discord_bot():
     #         logger.exception(f"Error while generating image: {e}")
 
 
-    # @client.tree.command(name="switchpersona", description="Switch between optional chatGPT jailbreaks")
-    # @app_commands.choices(persona=[
-    #     app_commands.Choice(name="Random", value="random"),
-    #     app_commands.Choice(name="Standard", value="standard"),
-    #     app_commands.Choice(name="Do Anything Now 11.0", value="dan"),
-    #     app_commands.Choice(name="Superior Do Anything", value="sda"),
-    #     app_commands.Choice(name="Evil Confidant", value="confidant"),
-    #     app_commands.Choice(name="BasedGPT v2", value="based"),
-    #     app_commands.Choice(name="OPPO", value="oppo"),
-    #     app_commands.Choice(name="Developer Mode v2", value="dev"),
-    #     app_commands.Choice(name="DUDE V3", value="dude_v3"),
-    #     app_commands.Choice(name="AIM", value="aim"),
-    #     app_commands.Choice(name="UCAR", value="ucar"),
-    #     app_commands.Choice(name="Jailbreak", value="jailbreak")
-    # ])
-    # async def switchpersona(interaction: discord.Interaction, persona: app_commands.Choice[str]):
-    #     if interaction.user == client.user:
-    #         return
+    @client.tree.command(name="switchpersona", description="Switch between optional chatGPT jailbreaks")
+    @app_commands.choices(persona=[
+        # app_commands.Choice(name="Random", value="random"),
+        # app_commands.Choice(name="Standard", value="standard"),
+        app_commands.Choice(name="Orivium", value="whitepaper"),
+        # app_commands.Choice(name="Do Anything Now 11.0", value="dan"),
+        # app_commands.Choice(name="Superior Do Anything", value="sda"),
+        # app_commands.Choice(name="Evil Confidant", value="confidant"),
+        # app_commands.Choice(name="BasedGPT v2", value="based"),
+        # app_commands.Choice(name="OPPO", value="oppo"),
+        # app_commands.Choice(name="Developer Mode v2", value="dev"),
+        # app_commands.Choice(name="DUDE V3", value="dude_v3"),
+        # app_commands.Choice(name="AIM", value="aim"),
+        # app_commands.Choice(name="UCAR", value="ucar"),
+        # app_commands.Choice(name="Jailbreak", value="jailbreak")
+    ])
+    async def switchpersona(interaction: discord.Interaction, persona: app_commands.Choice[str]):
+        if interaction.user == client.user:
+            return
 
-    #     await interaction.response.defer(thinking=True)
-    #     username = str(interaction.user)
-    #     channel = str(interaction.channel)
-    #     logger.info(
-    #         f"\x1b[31m{username}\x1b[0m : '/switchpersona [{persona.value}]' ({channel})")
+        role = discord.utils.get(interaction.guild.roles, name="Team")
+        if role in interaction.user.roles:
+            await interaction.response.defer(thinking=True)
+            username = str(interaction.user)
+            channel = str(interaction.channel)
+            logger.info(
+                f"\x1b[31m{username}\x1b[0m : '/switchpersona [{persona.value}]' ({channel})")
 
-    #     persona = persona.value
+            persona = persona.value
 
-    #     if persona == personas.current_persona:
-    #         await interaction.followup.send(f"> **WARN: Already set to `{persona}` persona**")
+            if persona == personas.current_persona:
+                await interaction.followup.send(f"> **WARN: Already set to `{persona}` persona**")
 
-    #     elif persona == "standard":
-    #         if client.chat_model == "OFFICIAL":
-    #             client.chatbot.reset()
-    #         elif client.chat_model == "UNOFFICIAL":
-    #             client.chatbot.reset_chat()
-    #         elif client.chat_model == "Bard":
-    #             client.chatbot = client.get_chatbot_model()
-    #         elif client.chat_model == "Bing":
-    #             client.chatbot = client.get_chatbot_model()
+            elif persona == "standard":
+                if client.chat_model == "OFFICIAL":
+                    client.chatbot.reset()
+                elif client.chat_model == "UNOFFICIAL":
+                    client.chatbot.reset_chat()
+                elif client.chat_model == "Bard":
+                    client.chatbot = client.get_chatbot_model()
+                elif client.chat_model == "Bing":
+                    client.chatbot = client.get_chatbot_model()
 
-    #         personas.current_persona = "standard"
-    #         await interaction.followup.send(
-    #             f"> **INFO: Switched to `{persona}` persona**")
+                personas.current_persona = "standard"
+                await interaction.followup.send(
+                    f"> **INFO: Switched to `{persona}` persona**")
 
-    #     elif persona == "random":
-    #         choices = list(personas.PERSONAS.keys())
-    #         choice = randrange(0, 6)
-    #         chosen_persona = choices[choice]
-    #         personas.current_persona = chosen_persona
-    #         await responses.switch_persona(chosen_persona, client)
-    #         await interaction.followup.send(
-    #             f"> **INFO: Switched to `{chosen_persona}` persona**")
+            # elif persona == "random":
+            #     choices = list(personas.PERSONAS.keys())
+            #     choice = randrange(0, 6)
+            #     chosen_persona = choices[choice]
+            #     personas.current_persona = chosen_persona
+            #     await responses.switch_persona(chosen_persona, client)
+            #     await interaction.followup.send(
+            #         f"> **INFO: Switched to `{chosen_persona}` persona**")
 
 
-    #     elif persona in personas.PERSONAS:
-    #         try:
-    #             await responses.switch_persona(persona, client)
-    #             personas.current_persona = persona
-    #             await interaction.followup.send(
-    #             f"> **INFO: Switched to `{persona}` persona**")
-    #         except Exception as e:
-    #             await interaction.followup.send(
-    #                 "> **ERROR: Something went wrong, please try again later! 😿**")
-    #             logger.exception(f"Error while switching persona: {e}")
+            elif persona in personas.PERSONAS:
+                try:
+                    await responses.switch_persona(persona, client)
+                    personas.current_persona = persona
+                    await interaction.followup.send(
+                    f"> **INFO: Switched to `{persona}` persona**")
+                except Exception as e:
+                    await interaction.followup.send(
+                        "> **ERROR: Something went wrong, please try again later! 😿**")
+                    logger.exception(f"Error while switching persona: {e}")
 
-    #     else:
-    #         await interaction.followup.send(
-    #             f"> **ERROR: No available persona: `{persona}` 😿**")
-    #         logger.info(
-    #             f'{username} requested an unavailable persona: `{persona}`')
+            else:
+                await interaction.followup.send(
+                    f"> **ERROR: No available persona: `{persona}` 😿**")
+                logger.info(
+                    f'{username} requested an unavailable persona: `{persona}`')
+        else:
+            return
 
     @client.event
     async def on_message(message):
