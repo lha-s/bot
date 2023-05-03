@@ -29,7 +29,7 @@ warnings.filterwarnings("ignore", category=DeprecationWarning)
 
 pd.set_option('display.max_colwidth', 0)
 
-data_dir = os.path.join(os.curdir,'data')
+data_dir = os.path.join(os.curdir,'src/embedding/data')
 pdf_files = sorted([x for x in os.listdir(data_dir) if 'DS_Store' not in x])
 print(pdf_files)
 
@@ -81,7 +81,7 @@ fields = [filename,text_chunk,file_chunk_index,text_embedding]
 redis_client.ping()
 
 # Optional step to drop the index if it already exists
-redis_client.ft(INDEX_NAME).dropindex()
+# redis_client.ft(INDEX_NAME).dropindex()
 
 # Check if index exists
 try:

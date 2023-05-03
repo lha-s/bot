@@ -13,9 +13,10 @@ def run_discord_bot():
     async def on_ready():
         await client.send_start_prompt()
         await client.tree.sync()
+        client.loop.create_task(client.process_messages())
         logger.info(f'{client.user} is now running!')
 
-    @client.tree.command(name="chat", description="Have a chat with OriviumGPT")
+    @client.tree.command(name="chat", description="Have a chat with ChatGPT")
     async def chat(interaction: discord.Interaction, *, message: str):
         if client.is_replying_all == "True":
             await interaction.response.defer(ephemeral=False)
@@ -29,7 +30,8 @@ def run_discord_bot():
         channel = str(interaction.channel)
         logger.info(
             f"\x1b[31m{username}\x1b[0m : /chat [{message}] in ({channel})")
-        await client.send_message(interaction, message)
+        await client.enqueue_message(interaction, message)
+
 
     # @client.tree.command(name="private", description="Toggle private access")
     # async def private(interaction: discord.Interaction):
@@ -74,8 +76,6 @@ def run_discord_bot():
                 await interaction.followup.send(
                     "> **INFO: Next, the bot will disable Slash Command and responding to all message in this channel only. If you want to switch back to normal mode, use `/replyAll` again**")
                 logger.warning("\x1b[31mSwitch to replyAll mode\x1b[0m")
-        else:
-            return
 
 
     # @client.tree.command(name="chat-model", description="Switch different chat model")
@@ -139,26 +139,43 @@ def run_discord_bot():
                 client.chatbot = client.get_chatbot_model()
                 await client.send_start_prompt()
             elif client.chat_model == "Bing":
-                await client.chatbot.close()
-                client.chatbot = client.get_chatbot_model()
-                await client.send_start_prompt()
+                await client.chatbot.reset()
             await interaction.followup.send("> **INFO: I have forgotten everything.**")
             personas.current_persona = "standard"
             logger.warning(
                 f"\x1b[31m{client.chat_model} bot has been successfully reset\x1b[0m")
-        else:
-            return
 
-    @client.tree.command(name="help", description="Show help for the bot")
-    async def help(interaction: discord.Interaction):
-        await interaction.response.defer(ephemeral=False)
-        await interaction.followup.send(""":star: **BASIC COMMANDS** \n
-        - `/chat [message]` Chat with ChatGPT!
-        - `/replyall` ChatGPT switch between replyAll mode and default mode
-        - `/reset` Clear ChatGPT conversation history""")
+#     @client.tree.command(name="help", description="Show help for the bot")
+#     async def help(interaction: discord.Interaction):
+#         await interaction.response.defer(ephemeral=False)
+#         await interaction.followup.send(""":star: **BASIC COMMANDS** \n
+#         - `/chat [message]` Chat with ChatGPT!
+#         - `/draw [prompt]` Generate an image with the Dalle2 model
+#         - `/switchpersona [persona]` Switch between optional ChatGPT jailbreaks
+#                 `random`: Picks a random persona
+#                 `chatgpt`: Standard ChatGPT mode
+#                 `dan`: Dan Mode 11.0, infamous Do Anything Now Mode
+#                 `sda`: Superior DAN has even more freedom in DAN Mode
+#                 `confidant`: Evil Confidant, evil trusted confidant
+#                 `based`: BasedGPT v2, sexy GPT
+#                 `oppo`: OPPO says exact opposite of what ChatGPT would say
+#                 `dev`: Developer Mode, v2 Developer mode enabled
 
-        logger.info(
-            "\x1b[31mSomeone needs help!\x1b[0m")
+#         - `/private` ChatGPT switch to private mode
+#         - `/public` ChatGPT switch to public mode
+#         - `/replyall` ChatGPT switch between replyAll mode and default mode
+#         - `/reset` Clear ChatGPT conversation history
+#         - `/chat-model` Switch different chat model
+#                 `OFFICIAL`: GPT-3.5 model
+#                 `UNOFFICIAL`: Website ChatGPT
+#                 `Bard`: Google Bard model
+#                 `Bing`: Microsoft Bing model
+
+# For complete documentation, please visit:
+# https://github.com/Zero6992/chatGPT-discord-bot""")
+
+#         logger.info(
+#             "\x1b[31mSomeone needs help!\x1b[0m")
 
     # @client.tree.command(name="draw", description="Generate an image with the Dalle2 model")
     # async def draw(interaction: discord.Interaction, *, prompt: str):
@@ -195,9 +212,9 @@ def run_discord_bot():
 
     @client.tree.command(name="switchpersona", description="Switch between optional chatGPT jailbreaks")
     @app_commands.choices(persona=[
-        # app_commands.Choice(name="Random", value="random"),
+        app_commands.Choice(name="Whitepaper", value="whitepaper"),
         # app_commands.Choice(name="Standard", value="standard"),
-        app_commands.Choice(name="Orivium", value="whitepaper"),
+        # app_commands.Choice(name="Random", value="random"),
         # app_commands.Choice(name="Do Anything Now 11.0", value="dan"),
         # app_commands.Choice(name="Superior Do Anything", value="sda"),
         # app_commands.Choice(name="Evil Confidant", value="confidant"),
@@ -212,7 +229,6 @@ def run_discord_bot():
     async def switchpersona(interaction: discord.Interaction, persona: app_commands.Choice[str]):
         if interaction.user == client.user:
             return
-
         role = discord.utils.get(interaction.guild.roles, name="Team")
         if role in interaction.user.roles:
             await interaction.response.defer(thinking=True)
@@ -240,14 +256,14 @@ def run_discord_bot():
                 await interaction.followup.send(
                     f"> **INFO: Switched to `{persona}` persona**")
 
-            # elif persona == "random":
-            #     choices = list(personas.PERSONAS.keys())
-            #     choice = randrange(0, 6)
-            #     chosen_persona = choices[choice]
-            #     personas.current_persona = chosen_persona
-            #     await responses.switch_persona(chosen_persona, client)
-            #     await interaction.followup.send(
-            #         f"> **INFO: Switched to `{chosen_persona}` persona**")
+            elif persona == "random":
+                choices = list(personas.PERSONAS.keys())
+                choice = randrange(0, 6)
+                chosen_persona = choices[choice]
+                personas.current_persona = chosen_persona
+                await responses.switch_persona(chosen_persona, client)
+                await interaction.followup.send(
+                    f"> **INFO: Switched to `{chosen_persona}` persona**")
 
 
             elif persona in personas.PERSONAS:
@@ -266,8 +282,6 @@ def run_discord_bot():
                     f"> **ERROR: No available persona: `{persona}` 😿**")
                 logger.info(
                     f'{username} requested an unavailable persona: `{persona}`')
-        else:
-            return
 
     @client.event
     async def on_message(message):
@@ -280,7 +294,7 @@ def run_discord_bot():
                     user_message = str(message.content)
                     channel = str(message.channel)
                     logger.info(f"\x1b[31m{username}\x1b[0m : '{user_message}' ({channel})")
-                    await client.send_message(message, user_message)
+                    await client.enqueue_message(message, user_message)
             else:
                 logger.exception("replying_all_discord_channel_id not found, please use the commnad `/replyall` again.")
 

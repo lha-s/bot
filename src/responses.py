@@ -2,11 +2,14 @@ from src import personas
 from asgiref.sync import sync_to_async
 
 import openai
-from termcolor import colored
-import streamlit as st
+from dotenv import load_dotenv
+import os
 
-from .database import get_redis_connection,get_redis_results
-from .config import CHAT_MODEL,COMPLETIONS_MODEL, INDEX_NAME
+load_dotenv()
+COMPLETIONS_MODEL = os.getenv('COMPLETIONS_MODEL')
+INDEX_NAME = os.getenv('INDEX_NAME')
+
+from src.embedding.database import get_redis_connection,get_redis_results
 
 async def pre_handle(user_message) -> str:
     question_extract = openai.Completion.create(model=COMPLETIONS_MODEL,prompt=f"Extract the user's latest question from this message: {user_message}. Extract it and translate it in english as a sentence stating the Question")
@@ -32,9 +35,13 @@ async def bard_handle_response(message, client) -> str:
 async def bing_handle_response(message, client) -> str:
     async for response in client.chatbot.ask_stream(message):
         responseMessage = response
-    return responseMessage[1]["item"]["messages"][1]["text"]
+    if len(responseMessage[1]["item"]["messages"]) > 1 and "text" in responseMessage[1]["item"]["messages"][1]:
+        return responseMessage[1]["item"]["messages"][1]["text"]
+    else:
+        await client.chatbot.reset()
+        raise Exception("Bing is unable to continue the previous conversation and will automatically RESET this conversation.")
 
-# resets conversation and asks chatGPT the prompt for a persona
+# prompt engineering
 async def switch_persona(persona, client) -> None:
     if client.chat_model ==  "UNOFFICIAL":
         client.chatbot.reset_chat()
@@ -46,6 +53,6 @@ async def switch_persona(persona, client) -> None:
         client.chatbot = client.get_chatbot_model()
         await sync_to_async(client.chatbot.ask)(personas.PERSONAS.get(persona))
     elif client.chat_model == "Bing":
-        client.chatbot = client.get_chatbot_model()
+        await client.chatbot.reset()
         async for _ in client.chatbot.ask_stream(personas.PERSONAS.get(persona)):
             pass

@@ -8,8 +8,6 @@ from config import CHAT_MODEL,COMPLETIONS_MODEL, INDEX_NAME
 
 redis_client = get_redis_connection()
 
-openai.api_key = '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'
-
 # A basic class to create a message as a dict for chat
 class Message:
     

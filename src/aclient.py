@@ -1,5 +1,6 @@
 import os
 import discord
+import asyncio
 from typing import Union
 from src import log, responses
 from dotenv import load_dotenv
@@ -8,8 +9,6 @@ from Bard import Chatbot as BardChatbot
 from revChatGPT.V3 import Chatbot
 from revChatGPT.V1 import AsyncChatbot
 from EdgeGPT import Chatbot as EdgeChatbot
-import openai
-
 
 logger = log.setup_logger(__name__)
 load_dotenv()
@@ -40,7 +39,7 @@ class aclient(discord.Client):
         self.bard_session_id = os.getenv("BARD_SESSION_ID")
         self.chat_model = os.getenv("CHAT_MODEL")
         self.chatbot = self.get_chatbot_model()
-
+        self.message_queue = asyncio.Queue()
 
     def get_chatbot_model(self, prompt=prompt) -> Union[AsyncChatbot, Chatbot]:
         if self.chat_model == "UNOFFICIAL":
@@ -50,12 +49,25 @@ class aclient(discord.Client):
         elif self.chat_model == "Bard":
             return BardChatbot(session_id=self.bard_session_id)
         elif self.chat_model == "Bing":
-            return EdgeChatbot(cookiePath='./cookies.json')
+            return EdgeChatbot(cookie_path='./cookies.json')
+
+    async def process_messages(self):
+        while True:
+            message, user_message = await self.message_queue.get()
+            try:
+                await self.send_message(message, user_message)
+            except Exception as e:
+                logger.exception(f"Error while processing message: {e}")
+            finally:
+                self.message_queue.task_done()
+
+    async def enqueue_message(self, message, user_message):
+        await message.response.defer(ephemeral=self.isPrivate) if self.is_replying_all == "False" else None
+        await self.message_queue.put((message, user_message))
 
     async def send_message(self, message, user_message):
         if self.is_replying_all == "False":
             author = message.user.id
-            await message.response.defer(ephemeral=self.isPrivate)
         else:
             author = message.author.id
         try:
@@ -64,13 +76,12 @@ class aclient(discord.Client):
                 chat_model_status = f'ChatGPT {self.openAI_gpt_engine}'
             elif self.chat_model == "OFFICIAL":
                 chat_model_status = f'OpenAI {self.openAI_gpt_engine}'
-            # response = (f'> **{user_message}** - <@{str(author)}> ({chat_model_status}) \n\n')
-            response = (f'> **{user_message}** - <@{str(author)}> \n\n')
+            response = (f'> **{user_message}** - <@{str(author)}> ({chat_model_status}) \n\n')
             if self.chat_model == "OFFICIAL":
-                ####
+                # ####
                 result = ""
                 result = f"{result}{await responses.pre_handle(user_message)}"
-                ####
+                # ####
                 response = f"{response}{await responses.official_handle_response(result, self)}"
             elif self.chat_model == "UNOFFICIAL":
                 response = f"{response}{await responses.unofficial_handle_response(user_message, self)}"
@@ -128,9 +139,9 @@ class aclient(discord.Client):
                 await message.followup.send(response)
         except Exception as e:
             if self.is_replying_all == "True":
-                await message.channel.send("> **ERROR: Something went wrong, please try again later!**")
+                await message.channel.send(f"> **ERROR: Something went wrong, please try again later!** \n ```ERROR MESSAGE: {e}```")
             else:
-                await message.followup.send("> **ERROR: Something went wrong, please try again later!**")
+                await message.followup.send(f"> **ERROR: Something went wrong, please try again later!** \n ```ERROR MESSAGE: {e}```")
             logger.exception(f"Error while sending message: {e}")
 
     async def send_start_prompt(self):
