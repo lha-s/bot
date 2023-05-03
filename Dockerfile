@@ -34,5 +34,6 @@ RUN pip3 install cryptography
 COPY ./ /DiscordBot
 WORKDIR /DiscordBot
 RUN pip3 install -r requirements.txt
+RUN python3 src/embedding/main.py
 
 CMD ["python3", "main.py"]
