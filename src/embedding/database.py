@@ -23,7 +23,8 @@ INDEX_NAME=os.getenv('INDEX_NAME')
 # from config import EMBEDDINGS_MODEL, PREFIX, VECTOR_FIELD_NAME
 
 # Get a Redis connection
-def get_redis_connection(host='localhost',port='6379',db=0):
+# def get_redis_connection(host='localhost',port='6379',db=0):
+def get_redis_connection(host='10.0.0.240',port='6379',db=0):
     
     r = Redis(host=host, port=port, db=db,decode_responses=False)
     return r
